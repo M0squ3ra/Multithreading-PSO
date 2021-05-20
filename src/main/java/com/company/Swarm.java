@@ -20,7 +20,6 @@ public class Swarm {
 
     private Particle[] particles;
 
-    private final Lock getParticleLock = new ReentrantLock();
     private final Lock updateGlobalBestLock = new ReentrantLock();
 
     private int numOfThreads;
