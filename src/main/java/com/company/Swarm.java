@@ -1,7 +1,11 @@
 package com.company;
 
 import com.company.Criterias.Criteria;
+import lombok.SneakyThrows;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.*;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -41,25 +45,20 @@ public class Swarm {
         endRange = DefaulParams.DEFAULT_END_RANGE;
     }
 
-    public void run () throws InterruptedException {
+    public void run () throws InterruptedException, BrokenBarrierException {
         this.particles = initializeParticles();
-        Sync sync = new Sync(this.numOfThreads);
+        ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(this.numOfThreads);
 
-        Thread threads[] = initializeThreads(sync);
-        for (Thread t: threads){
-            t.start();
-        }
+        List<Particle[]> particlesArray = initializeParticlesArrays();
+
 
         double oldEval = bestEval;
         System.out.println("--------------------------EXECUTING-------------------------");
 //        Benchmark this
         long t1;
-        synchronized (sync) {
-            while (!sync.allThreadsFinished())
-                sync.wait();
-
-            System.out.println("---------------------ALL THREADS RUNNING--------------------");
+        synchronized (this) {
             System.out.println("New Best Evaluation (Epoch " + 0 + "):\t"  + bestEval);
+            final CyclicBarrier barrier = new CyclicBarrier(this.numOfThreads + 1);
 
             t1 = System.nanoTime();
             for (int i = 0; i < epochs; i++) {
@@ -68,14 +67,32 @@ public class Swarm {
                     oldEval = bestEval;
                 }
 
-                sync.setNextCalc(true);
-                while (!sync.allThreadsFinished())
-                    sync.wait();
-
-                sync.setNextCalc(false);
-                while (!sync.allThreadsFinished()) {
-                    sync.wait();
+                barrier.reset();
+                for (Particle[] p: particlesArray){
+                    executor.execute(
+                            new Runnable(){
+                                @SneakyThrows
+                                @Override
+                                public void run() {
+                                    firstCalc(p,barrier);
+                                }
+                            }
+                    );
                 }
+                barrier.await();
+                barrier.reset();
+                for (Particle[] p: particlesArray){
+                    executor.execute(
+                            new Runnable(){
+                                @SneakyThrows
+                                @Override
+                                public void run() {
+                                    secondCalc(p,barrier);
+                                }
+                            }
+                    );
+                }
+                barrier.await();
             }
         }
         long t2 = System.nanoTime();
@@ -86,18 +103,38 @@ public class Swarm {
 
         System.out.println("Best Evaluation: " + bestEval);
         System.out.println("Time: " + ((double)((double)(t2-t1) / 100000)/10000) + " sec") ;
+    }
 
-        sync.setDone(true);
-        for (Thread t: threads)
-            t.join();
+    public void firstCalc(Particle[] particles, CyclicBarrier barrier) throws BrokenBarrierException, InterruptedException {
+        Particle auxBest = particles[0];
+        double auxBestEval = this.criteria.getWorstValue();
+        double auxEval = auxBestEval;
+
+        for (Particle p: particles){
+            auxEval = p.updatePersonalBest();
+            if (auxEval < auxBestEval){
+                auxBestEval = auxEval;
+                auxBest = p;
+            }
+        }
+        this.updateGlobalBest(auxBest);
+        barrier.await();
+    }
+    public void secondCalc(Particle[] particles, CyclicBarrier barrier) throws BrokenBarrierException, InterruptedException {
+        double gBest[] = this.getBestPosition();
+        for (Particle p: particles) {
+            p.updateVelocity(gBest,this.inertia,this.cognitiveComponent,this.socialComponent);
+            p.updatePosition();
+        }
+        barrier.await();
     }
 
     public double[] getBestPosition() {
         return this.bestPosition.clone();
     }
 
-    private Thread[] initializeThreads(Sync sync){
-        Thread[] threads = new Thread[this.numOfThreads];
+    private List<Particle[]> initializeParticlesArrays(){
+        List<Particle[]> particlesArray = new ArrayList<Particle[]>();
 
         int n = this.numOfParticles / this.numOfThreads;
 
@@ -107,14 +144,16 @@ public class Swarm {
             for (int j = 0; j < n; j++)
                 threadParticles[j] = this.particles[j + (i * n)];
 
-            threads[i] = new Thread(new ParticleCalculator(sync,this,this.inertia,this.criteria,this.cognitiveComponent,this.socialComponent,threadParticles));
+            particlesArray.add(threadParticles);
         }
+
         threadParticles = new Particle[this.numOfParticles - (this.numOfThreads - 1) * n];
         for (int j = n * (this.numOfThreads - 1); j < this.numOfParticles; j++)
             threadParticles[j - ( n * (this.numOfThreads - 1))] = this.particles[j];
-        threads[this.numOfThreads - 1] = new Thread(new ParticleCalculator(sync,this,this.inertia,this.criteria,this.cognitiveComponent,this.socialComponent,threadParticles));
 
-        return threads;
+        particlesArray.add(threadParticles);
+
+        return particlesArray;
     }
 
     private Particle[] initializeParticles() {
