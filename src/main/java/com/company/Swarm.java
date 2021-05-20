@@ -55,45 +55,42 @@ public class Swarm {
         double oldEval = bestEval;
         System.out.println("--------------------------EXECUTING-------------------------");
 
-        long t1;
-        synchronized (this) {
-            System.out.println("New Best Evaluation (Epoch " + 0 + "):\t"  + bestEval);
-            final CyclicBarrier barrier = new CyclicBarrier(this.numOfThreads + 1);
+        System.out.println("New Best Evaluation (Epoch " + 0 + "):\t"  + bestEval);
+        final CyclicBarrier barrier = new CyclicBarrier(this.numOfThreads + 1);
 
-            t1 = System.nanoTime();
-            for (int i = 0; i < epochs; i++) {
-                if (this.criteria.compare(bestEval, oldEval)) {
-                    System.out.println("New Best Evaluation (Epoch " + (i + 1) + "):\t" + bestEval);
-                    oldEval = bestEval;
-                }
-
-                barrier.reset();
-                for (Particle[] p: particlesArray){
-                    executor.execute(
-                            new Runnable(){
-                                @SneakyThrows
-                                @Override
-                                public void run() {
-                                    firstCalc(p,barrier);
-                                }
-                            }
-                    );
-                }
-                barrier.await();
-                barrier.reset();
-                for (Particle[] p: particlesArray){
-                    executor.execute(
-                            new Runnable(){
-                                @SneakyThrows
-                                @Override
-                                public void run() {
-                                    secondCalc(p,barrier);
-                                }
-                            }
-                    );
-                }
-                barrier.await();
+        long t1 = System.nanoTime();
+        for (int i = 0; i < epochs; i++) {
+            if (this.criteria.compare(bestEval, oldEval)) {
+                System.out.println("New Best Evaluation (Epoch " + (i + 1) + "):\t" + bestEval);
+                oldEval = bestEval;
             }
+
+            barrier.reset();
+            for (Particle[] p: particlesArray){
+                executor.execute(
+                        new Runnable(){
+                            @SneakyThrows
+                            @Override
+                            public void run() {
+                                firstCalc(p,barrier);
+                            }
+                        }
+                );
+            }
+            barrier.await();
+            barrier.reset();
+            for (Particle[] p: particlesArray){
+                executor.execute(
+                        new Runnable(){
+                            @SneakyThrows
+                            @Override
+                            public void run() {
+                                secondCalc(p,barrier);
+                            }
+                        }
+                );
+            }
+            barrier.await();
         }
         long t2 = System.nanoTime();
 
@@ -102,7 +99,6 @@ public class Swarm {
         System.out.println("---------------------------RESULT---------------------------");
         for (int i = 0; i < this.criteria.getDimension(); i++)
             System.out.println("X" + i + " = " + this.bestPosition[i]);
-
         System.out.println("Best Evaluation: " + bestEval);
 //        Performance
         System.out.println("Number of Threads: " + this.numOfThreads);
