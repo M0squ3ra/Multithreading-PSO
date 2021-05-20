@@ -54,7 +54,7 @@ public class Swarm {
 
         double oldEval = bestEval;
         System.out.println("--------------------------EXECUTING-------------------------");
-//        Benchmark this
+
         long t1;
         synchronized (this) {
             System.out.println("New Best Evaluation (Epoch " + 0 + "):\t"  + bestEval);
@@ -97,12 +97,16 @@ public class Swarm {
         }
         long t2 = System.nanoTime();
 
+        executor.shutdownNow();
+
         System.out.println("---------------------------RESULT---------------------------");
         for (int i = 0; i < this.criteria.getDimension(); i++)
             System.out.println("X" + i + " = " + this.bestPosition[i]);
 
         System.out.println("Best Evaluation: " + bestEval);
-        System.out.println("Time: " + ((double)((double)(t2-t1) / 100000)/10000) + " sec") ;
+//        Performance
+        System.out.println("Number of Threads: " + this.numOfThreads);
+        System.out.println("Execution Time: " + ((double)((double)(t2-t1) / 100000)/10000) + " sec") ;
     }
 
     public void firstCalc(Particle[] particles, CyclicBarrier barrier) throws BrokenBarrierException, InterruptedException {
