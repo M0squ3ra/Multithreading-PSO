@@ -45,12 +45,13 @@ class Particle {
         return this.criteria.eval(this.position);
     }
 
-    public void updatePersonalBest () {
+    public double updatePersonalBest () {
         double eval = eval();
         if (this.criteria.compare(eval,this.bestEval)) {
             this.bestPosition = position.clone();
             this.bestEval = eval;
         }
+        return eval;
     }
 
     public double[] getBestPosition() {
@@ -62,6 +63,32 @@ class Particle {
     }
     void setVelocity (double[] velocity) {
         this.velocity = velocity.clone();
+    }
+
+    public void updateVelocity (double[] gBest, double inertia, double cognitiveComponent, double socialComponent) {
+        double oldVelocity[] = this.velocity;
+        double pBest[] = this.bestPosition;
+        double pos[] = this.position;
+
+        Random random = new Random();
+        double r1 = random.nextDouble();
+        double r2 = random.nextDouble();
+
+        double[] newVelocity = oldVelocity.clone();
+        Util.mul(newVelocity,inertia,this.criteria.getDimension());
+
+
+        Util.sub(pBest,pos,this.criteria.getDimension());
+        Util.mul(pBest,cognitiveComponent,this.criteria.getDimension());
+        Util.mul(pBest,r1,this.criteria.getDimension());
+        Util.add(newVelocity,pBest,criteria.getDimension());
+
+        Util.sub(gBest,pos,this.criteria.getDimension());
+        Util.mul(gBest,socialComponent,criteria.getDimension());
+        Util.mul(gBest,r2,this.criteria.getDimension());
+        Util.add(newVelocity,gBest,criteria.getDimension());
+
+        this.setVelocity(newVelocity);
     }
 
 }
