@@ -1,1 +1,1 @@
-# PSO
+# Multithreading Particle Swarm Optimization
