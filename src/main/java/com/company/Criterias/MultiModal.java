@@ -1,21 +1,23 @@
 package com.company.Criterias;
 
-public class Mishra01 implements Criteria{
+public class MultiModal implements Criteria{
     private int n;
 
-    public Mishra01(int n) {
+    public MultiModal(int n) {
         this.n = n;
     }
 
     @Override
     public double eval(double[] position) {
-        double sum = 0;
-        for (int i = 0; i < (this.n - 1); i++)
-            sum += position[i];
+        double p1 = 0;
+        double p2 = 1;
+        for (int i = 0; i < this.n; i++){
+            p1 += Math.abs(position[i]);
+            if (position[i] != 0)
+                p2 *= Math.abs(position[i]);
+        }
 
-        double xn = (double) this.n - sum;
-
-        return Math.pow((1 + xn), xn);
+        return p1 * p2;
     }
 
     @Override
@@ -31,5 +33,10 @@ public class Mishra01 implements Criteria{
     @Override
     public int getDimension() {
         return this.n;
+    }
+
+    @Override
+    public String getName() {
+        return "MultiModal";
     }
 }

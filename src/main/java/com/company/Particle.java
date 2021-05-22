@@ -55,7 +55,7 @@ class Particle {
     }
 
     public double[] getBestPosition() {
-        return bestPosition.clone();
+        return this.bestPosition.clone();
     }
 
     void updatePosition () {
@@ -81,12 +81,12 @@ class Particle {
         Util.sub(pBest,pos,this.criteria.getDimension());
         Util.mul(pBest,cognitiveComponent,this.criteria.getDimension());
         Util.mul(pBest,r1,this.criteria.getDimension());
-        Util.add(newVelocity,pBest,criteria.getDimension());
+        Util.add(newVelocity,pBest,this.criteria.getDimension());
 
         Util.sub(gBest,pos,this.criteria.getDimension());
         Util.mul(gBest,socialComponent,criteria.getDimension());
         Util.mul(gBest,r2,this.criteria.getDimension());
-        Util.add(newVelocity,gBest,criteria.getDimension());
+        Util.add(newVelocity,gBest,this.criteria.getDimension());
 
         this.setVelocity(newVelocity);
     }

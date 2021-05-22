@@ -19,9 +19,7 @@ public class Swarm {
     private int beginRange, endRange;
 
     private Particle[] particles;
-
     private final Lock updateGlobalBestLock = new ReentrantLock();
-
     private int numOfThreads;
 
 
@@ -37,31 +35,30 @@ public class Swarm {
         this.inertia = inertia;
         this.cognitiveComponent = cognitive;
         this.socialComponent = social;
-        double worstValue = this.criteria.getWorstValue();
-        bestPosition = new double[] {worstValue, worstValue, worstValue};
-        bestEval = this.criteria.getWorstValue();
-        beginRange = DefaulParams.DEFAULT_BEGIN_RANGE;
-        endRange = DefaulParams.DEFAULT_END_RANGE;
+        double worstValue = criteria.getWorstValue();
+        this.bestPosition = new double[] {worstValue, worstValue, worstValue};
+        this.bestEval = criteria.getWorstValue();
+        this.beginRange = DefaulParams.DEFAULT_BEGIN_RANGE;
+        this.endRange = DefaulParams.DEFAULT_END_RANGE;
     }
 
     public void run () throws InterruptedException, BrokenBarrierException {
         this.particles = initializeParticles();
         ThreadPoolExecutor executor = (ThreadPoolExecutor) Executors.newFixedThreadPool(this.numOfThreads);
+        executor.prestartAllCoreThreads();
+        final CyclicBarrier barrier = new CyclicBarrier(this.numOfThreads + 1);
 
         List<Particle[]> particlesArray = initializeParticlesArrays();
 
-
-        double oldEval = bestEval;
+        double oldEval = this.bestEval;
         System.out.println("--------------------------EXECUTING-------------------------");
-
         System.out.println("New Best Evaluation (Epoch " + 0 + "):\t"  + bestEval);
-        final CyclicBarrier barrier = new CyclicBarrier(this.numOfThreads + 1);
 
         long t1 = System.nanoTime();
         for (int i = 0; i < epochs; i++) {
-            if (this.criteria.compare(bestEval, oldEval)) {
-                System.out.println("New Best Evaluation (Epoch " + (i + 1) + "):\t" + bestEval);
-                oldEval = bestEval;
+            if (this.criteria.compare(this.bestEval, oldEval)) {
+                System.out.println("New Best Evaluation (Epoch " + (i + 1) + "):\t" + this.bestEval);
+                oldEval = this.bestEval;
             }
 
             barrier.reset();
@@ -96,11 +93,15 @@ public class Swarm {
         executor.shutdownNow();
 
         System.out.println("---------------------------RESULT---------------------------");
+        System.out.println("Objective Funcion: " + this.criteria.getName());
         for (int i = 0; i < this.criteria.getDimension(); i++)
             System.out.println("X" + i + " = " + this.bestPosition[i]);
-        System.out.println("Best Evaluation: " + bestEval);
+        System.out.println("Best Evaluation: " + this.bestEval);
 //        Performance
+        System.out.println("------------------------PERFORMANCE------------------------");
         System.out.println("Number of Threads: " + this.numOfThreads);
+        System.out.println("Number of Particles: " + this.particles.length);
+        System.out.println("Epochs: " + this.epochs);
         System.out.println("Execution Time: " + ((double)((double)(t2-t1) / 100000)/10000) + " sec") ;
     }
 
@@ -120,7 +121,7 @@ public class Swarm {
         barrier.await();
     }
     public void secondCalc(Particle[] particles, CyclicBarrier barrier) throws BrokenBarrierException, InterruptedException {
-        double gBest[] = this.getBestPosition();
+        double gBest[] = getBestPosition();
         for (Particle p: particles) {
             p.updateVelocity(gBest,this.inertia,this.cognitiveComponent,this.socialComponent);
             p.updatePosition();
@@ -156,9 +157,9 @@ public class Swarm {
     }
 
     private Particle[] initializeParticles() {
-        Particle[] particles = new Particle[numOfParticles];
-        for (int i = 0; i < numOfParticles; i++) {
-            Particle particle = new Particle(criteria,beginRange, endRange);
+        Particle[] particles = new Particle[this.numOfParticles];
+        for (int i = 0; i < this.numOfParticles; i++) {
+            Particle particle = new Particle(this.criteria,this.beginRange, this.endRange);
             particles[i] = particle;
             updateGlobalBest(particle);
         }
@@ -166,15 +167,15 @@ public class Swarm {
     }
 
     public void updateGlobalBest (Particle particle) {
-        updateGlobalBestLock.lock();
+        this.updateGlobalBestLock.lock();
         try {
-            if (this.criteria.compare(particle.getBestEval(),bestEval)) {
+            if (this.criteria.compare(particle.getBestEval(),this.bestEval)) {
                 double a[] = particle.getBestPosition();
                 this.bestPosition = particle.getBestPosition();
                 this.bestEval = particle.getBestEval();
             }
         } finally {
-            updateGlobalBestLock.unlock();
+            this.updateGlobalBestLock.unlock();
         }
     }
 

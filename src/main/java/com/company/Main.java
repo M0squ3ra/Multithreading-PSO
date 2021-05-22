@@ -10,7 +10,7 @@ public class Main {
 
     public static void main(String[] args) throws InterruptedException, BrokenBarrierException {
 
-        Criteria criteria = new Both();
+        Criteria criteria = new MultiModal(3);
         int particles = 10000;
         int epochs = 1000;
         double inertia, cognitive, social;

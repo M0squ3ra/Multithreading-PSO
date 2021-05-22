@@ -22,4 +22,9 @@ public class Bukin implements Criteria{
     public int getDimension() {
         return 2;
     }
+
+    @Override
+    public String getName() {
+        return "Bukin";
+    }
 }

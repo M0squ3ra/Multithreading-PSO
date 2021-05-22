@@ -6,4 +6,5 @@ public interface Criteria {
     public boolean compare(double newEval, double oldEval);
     public double getWorstValue();
     public int getDimension();
+    public String getName();
 }
